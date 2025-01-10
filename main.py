@@ -1,30 +1,59 @@
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, Field
 import uvicorn
 
-
+"""
+Создание объекта класса
+"""
 app = FastAPI()
 
-class STaskAdd(BaseModel):
-    name: str # определяет поле, которое должен содержать объект (тип "строка")
-    description: str | None = None # описание выше + дефолтное значение будет None
+"""
+Создание класса, который определяет модель (структуру)
+добавляемых данных (объектов) с определенными полями
+"""
+class UserRegistration(BaseModel):
+    username: str = Field() # определяет поле, которое должен содержать объект (тип "строка")
+    password: str = Field() # описание выше + дефолтное значение будет None
+    email: str = Field() # описание выше
+    telephone: str = Field(default = None) # описание выше + дефолтное значение будет None
 
-class STask(STaskAdd):
-    id: int # определяет поле, которое должен содержать объект (тип "int")
-    model_config = ConfigDict(from_attributes = True) # позволяеь создавать объект модели напрямую из атрибутов Python-объектов
+"""
+Ниже представлены тестовые данные
+"""
+user_1 = UserRegistration(username = "danil", 
+                            password = "GhL6deYX", 
+                            email = "danil.bakiroff84@gmail.com", 
+                            telephone = "89961080357")
+user_2 = UserRegistration(username = "dinis", 
+                            password = "031201", 
+                            email = "dinis.sachyirov84@gmail.com", 
+                            telephone = "88005553535")       
 
-@app.post("/",
+users = [user_1, user_2]    
+
+@app.get("/get_users",
+        tags = ["Получение пользователей"],
+        summary = "Получить всех пользователей")
+async def get_users():
+    return users
+
+@app.get("/get_user",
+        tags = ["Получение пользователей"],
+        summary = "Получить конкретного пользователя",
+        response_model = UserRegistration)
+async def get_users(username: str):
+    for user in users:
+        if user.username == username:
+            return user
+        raise HTTPException(status_code = 404, detail = "Такого пользователя нет")
+
+@app.post("/register",
             tags = ["Добавление данных"],
-            summary = "Добавить данные")
-async def add_task(task: STaskAdd = Depends()):
-    return {"data": task}
-
-@app.get("/",
-        tags = ["Получение данных"], # задать тэг (титул для распределения запросов (по сути просто для красоты))
-        summary = "Получить ответ" # псевдоним функциям, которые определены после декоратора
-        )
-async def home():
-    return {"data": "Hello World"}
+            summary = "Добавить данные",
+            response_model = UserRegistration)
+async def register_user(user: UserRegistration):
+    users.append(user)
+    return {"message": "Пользователь добавлен", "user": user}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
