@@ -1,38 +1,30 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Depends
+from pydantic import BaseModel, ConfigDict
 import uvicorn
 
 
 app = FastAPI()
 
-books = [
-    {
-        "id": 1,
-        "name": "Python для новичков",
-        "Author": "ДДТ"
-    },
-    {
-        "id": 2,
-        "name": "Python для продвинутых",
-        "Author": "БДТ"
-    },
-]
+class STaskAdd(BaseModel):
+    name: str # определяет поле, которое должен содержать объект (тип "строка")
+    description: str | None = None # описание выше + дефолтное значение будет None
 
-@app.get("/books",
-        tags = ["Книга"], # задать тэг (титул для распределения запросов (по сути просто для красоты))
-        summary = "Получить все книги"
+class STask(STaskAdd):
+    id: int # определяет поле, которое должен содержать объект (тип "int")
+    model_config = ConfigDict(from_attributes = True) # позволяеь создавать объект модели напрямую из атрибутов Python-объектов
+
+@app.post("/",
+            tags = ["Добавление данных"],
+            summary = "Добавить данные")
+async def add_task(task: STaskAdd = Depends()):
+    return {"data": task}
+
+@app.get("/",
+        tags = ["Получение данных"], # задать тэг (титул для распределения запросов (по сути просто для красоты))
+        summary = "Получить ответ" # псевдоним функциям, которые определены после декоратора
         )
-def read_books():
-    return books
-
-@app.get("/books/{book_id}",
-        tags = ["Книга"],
-        summary = "Получить конкретную книгу")
-def get_books(book_id: int):
-    for book in books:
-        if book["id"] == book_id:
-            return book
-    raise HTTPException(status_code = 404, detail = "Данная книга не найдена. Проверьте входящие данные")
+async def home():
+    return {"data": "Hello World"}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
